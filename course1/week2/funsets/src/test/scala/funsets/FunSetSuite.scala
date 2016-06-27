@@ -2,7 +2,6 @@ package funsets
 
 import org.scalatest.FunSuite
 
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
@@ -46,7 +45,6 @@ class FunSetSuite extends FunSuite {
   // test("adding ints") {
   //   assert(1 + 2 === 3)
   // }
-
 
   import FunSets._
 
@@ -110,5 +108,44 @@ class FunSetSuite extends FunSuite {
     }
   }
 
+  test("intersection contains common elements of all sets") {
+    new TestSets {
+      val u12 = union(s1, s2)
+      val u13 = union(s1, s3)
+      val u12iu13 = intersect(u12, u13)
+      assert(contains(u12iu13, 1), "Intersect 1")
+      assert(!contains(u12iu13, 2), "Intersect 2")
+      assert(!contains(u12iu13, 3), "Intersect 3")
+    }
+  }
 
+  test("the difference of the two given sets") {
+    new TestSets {
+      val u12 = union(s1, s2)
+      val u13 = union(s1, s3)
+      val u12du13 = diff(u12, u13)
+      assert(!contains(u12du13, 1), "Diff 1")
+      assert(contains(u12du13, 2), "Diff 2")
+      assert(!contains(u12du13, 3), "Diff 3")
+    }
+  }
+
+  test("the filter of given set") {
+    new TestSets {
+      val u12 = union(s1, s2)
+      val f = filter(u12, x => (x >= 2))
+      assert(!contains(f, 1), "Filter 1")
+      assert(contains(f, 2), "Filter 2")
+    }
+  }
+
+  test("the map of given set") {
+    new TestSets {
+      val u12 = union(s1, s2)
+      val m = map(u12, x => x * 3)
+      assert(contains(m, 3), "Map 3")
+      assert(contains(m, 6), "Map 6")
+      assert(!contains(m, 4), "Map 4")
+    }
+  }
 }
