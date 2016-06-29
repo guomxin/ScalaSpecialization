@@ -19,6 +19,7 @@ class TweetSetSuite extends FunSuite {
     val set5 = set4c.incl(d)
   }
 
+  
   def asSet(tweets: TweetSet): Set[Tweet] = {
     var res = Set[Tweet]()
     tweets.foreach(res += _)
