@@ -120,17 +120,17 @@ object Huffman {
    * If `trees` is a list of less than two elements, that list should be returned
    * unchanged.
    */
-  def combine(trees: List[CodeTree]): List[CodeTree] = 
+  def combine(trees: List[CodeTree]): List[CodeTree] =
     if (trees.length < 2) trees
     else insertToOrderedTreeList(
-          makeCodeTree(trees(0), trees(1)), 
-          trees.tail.tail)
-  
+      makeCodeTree(trees(0), trees(1)),
+      trees.tail.tail)
+
   def insertToOrderedTreeList(codeTree: CodeTree, trees: List[CodeTree]): List[CodeTree] = trees match {
-      case Nil => codeTree :: Nil
-      case head :: tailTrees => 
-        if (weight(codeTree) < weight(head)) codeTree :: trees
-        else head :: insertToOrderedTreeList(codeTree, tailTrees)
+    case Nil => codeTree :: Nil
+    case head :: tailTrees =>
+      if (weight(codeTree) < weight(head)) codeTree :: trees
+      else head :: insertToOrderedTreeList(codeTree, tailTrees)
   }
 
   /**
@@ -150,7 +150,7 @@ object Huffman {
    *    the example invocation. Also define the return type of the `until` function.
    *  - try to find sensible parameter names for `xxx`, `yyy` and `zzz`.
    */
-  def until(stopCriteria: List[CodeTree] => Boolean, action: List[CodeTree] => List[CodeTree])(initial: List[CodeTree]): List[CodeTree] = 
+  def until(stopCriteria: List[CodeTree] => Boolean, action: List[CodeTree] => List[CodeTree])(initial: List[CodeTree]): List[CodeTree] =
     if (stopCriteria(initial)) initial
     else until(stopCriteria, action)(action(initial))
 
@@ -160,9 +160,9 @@ object Huffman {
    * The parameter `chars` is an arbitrary text. This function extracts the character
    * frequencies from that text and creates a code tree based on them.
    */
-  def createCodeTree(chars: List[Char]): CodeTree = 
+  def createCodeTree(chars: List[Char]): CodeTree =
     until(singleton, combine)(makeOrderedLeafList(times(chars)))(0)
- 
+
   // Part 3: Decoding
 
   type Bit = Int
@@ -171,17 +171,16 @@ object Huffman {
    * This function decodes the bit sequence `bits` using the code tree `tree` and returns
    * the resulting list of characters.
    */
-  def decode(tree: CodeTree, bits: List[Bit]): List[Char] =  {
+  def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
     decode(tree, tree, bits)
   }
-  
-  def decode(root: CodeTree, currNode: CodeTree, bits:List[Bit]) : List[Char] = currNode match {
+
+  def decode(root: CodeTree, currNode: CodeTree, bits: List[Bit]): List[Char] = currNode match {
     case Leaf(char, _) => char :: (if (bits.isEmpty) Nil else decode(root, root, bits))
-    case Fork(left, right, _, _) => 
+    case Fork(left, right, _, _) =>
       if (bits.head == 0) decode(root, left, bits.tail)
       else decode(root, right, bits.tail)
   }
-    
 
   /**
    * A Huffman coding tree for the French language.
@@ -208,21 +207,21 @@ object Huffman {
    * into a sequence of bits.
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = text match {
-    case Nil => Nil
+    case Nil          => Nil
     case ch :: rchars => encodeChar(tree)(ch) ::: encode(tree)(rchars)
   }
-  
+
   def belongsTo(char: Char, tree: CodeTree): Boolean = tree match {
-    case Leaf(ch, _) =>  ch == char
+    case Leaf(ch, _)          => ch == char
     case Fork(_, _, chars, _) => chars.contains(char)
   }
-  
+
   def encodeChar(tree: CodeTree)(char: Char): List[Bit] = tree match {
     case Leaf(ch, _) => Nil
-    case Fork(left, right, _, _) => 
+    case Fork(left, right, _, _) =>
       if (belongsTo(char, left)) 0 :: encodeChar(left)(char)
-      else  1 :: encodeChar(right)(char)
-  }  
+      else 1 :: encodeChar(right)(char)
+  }
 
   // Part 4b: Encoding using code table
 
@@ -232,8 +231,8 @@ object Huffman {
    * This function returns the bit sequence that represents the character `char` in
    * the code table `table`.
    */
-  def codeBits(table: CodeTable)(char: Char): List[Bit] =  table match {
-    case Nil => Nil
+  def codeBits(table: CodeTable)(char: Char): List[Bit] = table match {
+    case Nil                  => Nil
     case (ch, bits) :: rtable => if (ch == char) bits else codeBits(rtable)(char)
   }
 
@@ -246,7 +245,7 @@ object Huffman {
    * sub-trees, think of how to build the code table for the entire tree.
    */
   def convert(tree: CodeTree): CodeTable = tree match {
-    case Leaf(ch, _) => Nil
+    case Leaf(ch, _)             => List((ch, Nil))
     case Fork(left, right, _, _) => mergeCodeTables(convert(left), convert(right))
   }
 
@@ -255,13 +254,13 @@ object Huffman {
    * use it in the `convert` method above, this merge method might also do some transformations
    * on the two parameter code tables.
    */
-  def mergeCodeTables(a: CodeTable, b: CodeTable): CodeTable = 
-    a match {
-    case Nil => Nil
-    case pair :: rpairs => (pair._1, 0 :: pair._2) :: 
+  def mergeCodeTables(a: CodeTable, b: CodeTable): CodeTable =
+    prefixCodeTable(0, a) ::: prefixCodeTable(1, b)
+
+  def prefixCodeTable(bit: Bit, codeTable: CodeTable): CodeTable = codeTable match {
+    case Nil            => Nil
+    case pair :: rpairs => (pair._1, bit :: pair._2) :: prefixCodeTable(bit, rpairs)
   }
-  
-  def 
 
   /**
    * This function encodes `text` according to the code tree `tree`.
@@ -269,14 +268,14 @@ object Huffman {
    * To speed up the encoding process, it first converts the code tree to a code table
    * and then uses it to perform the actual encoding.
    */
-  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] =  
+  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] =
     quickEncode(tree, convert(tree))(text)
-  
-  def quickEncode(tree: CodeTree, codeTable : CodeTable)(text: List[Char]): List[Bit] = text match {
-    case Nil => Nil
+
+  def quickEncode(tree: CodeTree, codeTable: CodeTable)(text: List[Char]): List[Bit] = text match {
+    case Nil          => Nil
     case ch :: rchars => codeBits(codeTable)(ch) ::: quickEncode(tree, codeTable)(rchars)
   }
-  
+
   def main(args: Array[String]) = {
     println(createCodeTree("patmat.Huffman.patmat.Huffman.<local Huffman>".toList))
   }
