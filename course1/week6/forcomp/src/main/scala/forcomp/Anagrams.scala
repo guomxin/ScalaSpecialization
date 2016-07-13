@@ -161,16 +161,14 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = {
-    if (sentence == Nil) List(Nil)
-    else computeAnagramsFromCombinations(sentenceOccurrences(sentence))
-  }
+  def sentenceAnagrams(sentence: Sentence): List[Sentence] = 
+    computeAnagramsFromCombinations(sentenceOccurrences(sentence))
 
   def computeAnagramsFromCombinations(sentenceOccurs: Occurrences): List[Sentence] = {
     val combs = combinations(sentenceOccurs)
     if (combs == List(Nil)) List(Nil)
     else {
-      for {comb <- combs if comb != Nil
+      for {comb <- combs
           anagram <- occurrencesAnagrams(comb) 
           remain = subtract(sentenceOccurs, comb)
           sents <- computeAnagramsFromCombinations(remain)
