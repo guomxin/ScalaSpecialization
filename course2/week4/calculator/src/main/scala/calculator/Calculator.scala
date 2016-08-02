@@ -9,30 +9,34 @@ final case class Times(a: Expr, b: Expr) extends Expr
 final case class Divide(a: Expr, b: Expr) extends Expr
 
 object Calculator {
-  private var dependencies = Set[String]()
-  private var topname = ""
+  private var dependencies = Map[String, Set[String]]()
 
   def computeValues(namedExpressions: Map[String, Signal[Expr]]): Map[String, Signal[Double]] = {
+    dependencies = namedExpressions map {
+      case (name, _) => (name, Set[String]())
+    }
     namedExpressions map {
       case (name, exprSignal) => {
-        topname = name
-        dependencies = Set[String]()
-        (name, Signal(eval(exprSignal(), namedExpressions)))
+        (name, Signal(eval(exprSignal(), namedExpressions, name)))
       }
     }
   }
 
-  def eval(expr: Expr, references: Map[String, Signal[Expr]]): Double = expr match {
+  def eval(expr: Expr, references: Map[String, Signal[Expr]], exprName: String): Double = expr match {
     case Literal(v) => v
     case Ref(name) => {
-      dependencies += name
-      if (dependencies.contains(topname)) Double.NaN
-      else eval(getReferenceExpr(name, references), references)
+      if (dependencies.contains(name)) {
+        dependencies +=  (exprName -> (dependencies(exprName) + name))
+        dependencies +=  (exprName -> (dependencies(exprName) ++ dependencies(name)))
+        if (dependencies(exprName) contains exprName) Double.NaN
+        else eval(getReferenceExpr(name, references), references, name) 
+      } else Double.NaN
+      
     }
-    case Plus(a, b)   => eval(a, references) + eval(b, references)
-    case Minus(a, b)  => eval(a, references) - eval(b, references)
-    case Times(a, b)  => eval(a, references) * eval(b, references)
-    case Divide(a, b) => eval(a, references) / eval(b, references)
+    case Plus(a, b)   => eval(a, references, exprName) + eval(b, references, exprName)
+    case Minus(a, b)  => eval(a, references, exprName) - eval(b, references, exprName)
+    case Times(a, b)  => eval(a, references, exprName) * eval(b, references, exprName)
+    case Divide(a, b) => eval(a, references, exprName) / eval(b, references, exprName)
   }
 
   /**
@@ -51,18 +55,17 @@ object Calculator {
   def main(args: Array[String]) {
     val namedExprs = Map[String, Var[Expr]](
       "a" -> Var(Literal(1)),
-      "b" -> Var(Plus(Ref("a"), Literal(1))))
-      /*
-      "c" -> Signal(Times(Ref("a"), Literal(3))),
-      "d" -> Signal(Times(Ref("b"), Ref("c"))),
-      "e" -> Signal(Times(Ref("f"), Literal(1))),
-      "f" -> Signal(Times(Ref("e"), Literal(2))),
-      "h" -> Signal(Times(Ref("a"), Ref("h"))),
-      "g" -> Signal(Times(Ref("b"), Ref("h"))))
-      */
+      "b" -> Var(Plus(Ref("a"), Literal(1))),
+      "c" -> Var(Times(Ref("a"), Literal(3))),
+      "d" -> Var(Times(Ref("b"), Ref("c"))),
+      "e" -> Var(Times(Ref("f"), Literal(1))),
+      "f" -> Var(Times(Ref("e"), Literal(2))),
+      "h" -> Var(Times(Ref("a"), Ref("h"))),
+      "g" -> Var(Times(Ref("b"), Ref("h")))
+    )
     val results = computeValues(namedExprs)
     results foreach { case (name, sig) => println(name + "=" + sig()) }
-    namedExprs("a")() = Plus(Ref("a"), Literal(1)) 
-    results foreach { case (name, sig) => println(name + "=" + sig()) }
+    //namedExprs("a")() = Plus(Ref("a"), Literal(1)) 
+    //results foreach { case (name, sig) => println(name + "=" + sig()) }
   }
 }
