@@ -57,7 +57,7 @@ object HorizontalBoxBlur {
    *  rows.
    */
   def parBlur(src: Img, dst: Img, numTasks: Int, radius: Int): Unit = {
-    val parUnit = src.height / numTasks
+    val parUnit = if (src.height < numTasks) 1 else src.height / numTasks
     val begins = (0 until src.height by parUnit).toList
     val ends = begins.tail ::: List(src.height)
     val parTuples = begins zip ends
