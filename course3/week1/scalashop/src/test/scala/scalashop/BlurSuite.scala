@@ -57,6 +57,16 @@ class BlurSuite extends FunSuite {
     check(0, 2, 0)
     check(1, 2, 0)
     check(2, 2, 0)
+    
+    
+    HorizontalBoxBlur.parBlur(src, dst, 3, 1)
+    check(0, 0, 2)
+    check(1, 0, 2)
+    check(2, 0, 3)
+    check(0, 1, 3)
+    check(1, 1, 4)
+    check(2, 1, 4)
+
   }
 
   test("VerticalBoxBlur.blur with radius 2 should correctly blur the entire " +
@@ -87,7 +97,20 @@ class BlurSuite extends FunSuite {
     check(1, 2, 5)
     check(2, 2, 5)
     check(3, 2, 6)
-  }
 
+    VerticalBoxBlur.parBlur(src, dst, 3, 2)
+    check(0, 0, 4)
+    check(1, 0, 5)
+    check(2, 0, 5)
+    check(3, 0, 6)
+    check(0, 1, 4)
+    check(1, 1, 5)
+    check(2, 1, 5)
+    check(3, 1, 6)
+    check(0, 2, 4)
+    check(1, 2, 5)
+    check(2, 2, 5)
+    check(3, 2, 6)
+  }
 
 }
