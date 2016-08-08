@@ -41,7 +41,17 @@ object ParallelParenthesesBalancing {
   /** Returns `true` iff the parentheses in the input `chars` are balanced.
    */
   def balance(chars: Array[Char]): Boolean = {
-    ???
+    var i, leftParaCount, rightParaCount = 0
+    var stop = false
+    while ((i < chars.length) && !stop) {
+      if (chars(i) == '(') leftParaCount += 1
+      else if (chars(i) == ')') {
+        rightParaCount += 1
+        if (rightParaCount > leftParaCount) stop = true
+      }
+      i += 1
+    }
+    leftParaCount == rightParaCount
   }
 
   /** Returns `true` iff the parentheses in the input `chars` are balanced.
