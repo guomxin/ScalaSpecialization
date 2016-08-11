@@ -43,7 +43,9 @@ class KMeans {
   }
 
   def classify(points: GenSeq[Point], means: GenSeq[Point]): GenMap[Point, GenSeq[Point]] = {
-    ???
+    var result = points groupBy (findClosest(_, means))
+    for (mean <- means) if (!result.contains(mean)) result += (mean, GenSeq[Point]())
+    result
   }
 
   def findAverage(oldMean: Point, points: GenSeq[Point]): Point = if (points.length == 0) oldMean else {
@@ -59,32 +61,42 @@ class KMeans {
   }
 
   def update(classified: GenMap[Point, GenSeq[Point]], oldMeans: GenSeq[Point]): GenSeq[Point] = {
-    ???
+    for (oldMean <- oldMeans)
+      yield findAverage(oldMean, classified(oldMean))
   }
 
   def converged(eta: Double)(oldMeans: GenSeq[Point], newMeans: GenSeq[Point]): Boolean = {
-    ???
+    var i = 0
+    var isConverged = true
+    while ((i < oldMeans.length) && isConverged) {
+      if (oldMeans(i).squareDistance(newMeans(i)) > eta)
+        isConverged = false
+      i += 1
+    }
+    isConverged
   }
 
   @tailrec
   final def kMeans(points: GenSeq[Point], means: GenSeq[Point], eta: Double): GenSeq[Point] = {
-    if (???) kMeans(???, ???, ???) else ??? // your implementation need to be tail recursive
+    val resultRound = classify(points, means)
+    val newMeans = update(resultRound, means)
+    if (!converged(eta)(means, newMeans)) kMeans(points, newMeans, eta) else newMeans
   }
 }
 
-/** Describes one point in three-dimensional space.
+/**
+ * Describes one point in three-dimensional space.
  *
  *  Note: deliberately uses reference equality.
  */
 class Point(val x: Double, val y: Double, val z: Double) {
   private def square(v: Double): Double = v * v
   def squareDistance(that: Point): Double = {
-    square(that.x - x)  + square(that.y - y) + square(that.z - z)
+    square(that.x - x) + square(that.y - y) + square(that.z - z)
   }
   private def round(v: Double): Double = (v * 100).toInt / 100.0
   override def toString = s"(${round(x)}, ${round(y)}, ${round(z)})"
 }
-
 
 object KMeansRunner {
 
@@ -92,8 +104,7 @@ object KMeansRunner {
     Key.exec.minWarmupRuns -> 20,
     Key.exec.maxWarmupRuns -> 40,
     Key.exec.benchRuns -> 25,
-    Key.verbose -> true
-  ) withWarmer(new Warmer.Default)
+    Key.verbose -> true) withWarmer (new Warmer.Default)
 
   def main(args: Array[String]) {
     val kMeans = new KMeans()
@@ -103,19 +114,30 @@ object KMeansRunner {
     val k = 32
     val points = kMeans.generatePoints(k, numPoints)
     val means = kMeans.initializeMeans(k, points)
-
+    var result, resultPar = GenSeq[Point]()
+    
     val seqtime = standardConfig measure {
-      kMeans.kMeans(points, means, eta)
+      result = kMeans.kMeans(points, means, eta)
     }
     println(s"sequential time: $seqtime ms")
 
     val partime = standardConfig measure {
       val parPoints = points.par
       val parMeans = means.par
-      kMeans.kMeans(parPoints, parMeans, eta)
+      resultPar = kMeans.kMeans(parPoints, parMeans, eta)
+
     }
     println(s"parallel time: $partime ms")
     println(s"speedup: ${seqtime / partime}")
+    
+    var i = 0
+    var isSame = true
+    while (i < result.length && isSame) {
+      if (result(i).toString != resultPar(i).toString) isSame = false
+      //println(s"${result(i)} ${resultPar(i)}")
+      i += 1
+    }
+    println(s"Same[Seq vs. Par]: ${isSame}")
   }
 
 }

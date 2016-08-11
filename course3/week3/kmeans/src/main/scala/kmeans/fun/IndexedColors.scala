@@ -22,8 +22,8 @@ class IndexedColorFilter(initialImage: Img,
   private var steps = 0
 
   // What could we do here to speed up the computation?
-  val points = imageToPoints(initialImage)
-  val means = initializeIndex(colorCount, points)
+  val points = imageToPoints(initialImage).par
+  val means = initializeIndex(colorCount, points).par
 
   /* The work is done here: */
   private val newMeans = kMeans(points, means, 0.01)
@@ -33,7 +33,7 @@ class IndexedColorFilter(initialImage: Img,
   def getResult() = indexedImage(initialImage, newMeans)
 
   private def imageToPoints(img: Img): GenSeq[Point] =
-    for (x <- 0 until img.width; y <- 0 until img.height) yield {
+    for (x <- (0 until img.width); y <- (0 until img.height)) yield {
       val rgba = img(x, y)
       new Point(red(rgba), green(rgba), blue(rgba))
     }
@@ -42,7 +42,7 @@ class IndexedColorFilter(initialImage: Img,
     val dst = new Img(img.width, img.height)
     val pts = collection.mutable.Set[Point]()
 
-    for (x <- 0 until img.width; y <- 0 until img.height) yield {
+    for (x <- (0 until img.width); y <- (0 until img.height)) yield {
       val v = img(x, y)
       var point = new Point(red(v), green(v), blue(v))
       point = findClosest(point, means)
@@ -61,7 +61,7 @@ class IndexedColorFilter(initialImage: Img,
           (0 until numColors) map (idx => points(d * idx))
         case UniformSampling =>
           val sep: Int = 32
-          (for (r <- 0 until 255 by sep; g <- 0 until 255 by sep; b <- 0 until 255 by sep) yield {
+          (for (r <- (0 until 255 by sep); g <- (0 until 255 by sep); b <- (0 until 255 by sep)) yield {
             def inside(p: Point): Boolean =
               (p.x >= (r.toDouble / 255)) &&
               (p.x <= ((r.toDouble + sep) / 255)) &&
