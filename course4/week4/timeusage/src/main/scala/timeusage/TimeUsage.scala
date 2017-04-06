@@ -36,8 +36,9 @@ object TimeUsage {
 
   /** @return The read DataFrame along with its column names. */
   def read(resource: String): (List[String], DataFrame) = {
-    val rdd = spark.sparkContext.textFile(fsPath(resource))
-
+    val rdd = spark.sparkContext.textFile(fsPath(resource)) 
+    //val rdd = spark.sparkContext.textFile("timeusage/atussum.csv") // [Guomao: Debug]
+    
     val headerColumns = rdd.first().split(",").to[List]
     // Compute the schema based on the first line of the CSV file
     val schema = dfSchema(headerColumns)
@@ -148,13 +149,22 @@ object TimeUsage {
     otherColumns: List[Column],
     df: DataFrame
   ): DataFrame = {
-    val workingStatusProjection: Column = expr("if ((telfs >=1) && (telfs < 3)) \"working\" else \"not working\"")
-    val sexProjection: Column = expr("if (tesex == 1) \"male\" else \"female\"")
-    val ageProjection: Column = ???
+    val workingStatusUdf = udf((telfs:Double) => if ((telfs >=1) && (telfs < 3)) "working" else "not working")
+    val workingStatusProjection: Column = workingStatusUdf($"telfs").name("working")
+    val sexUdf = udf((tesex:Double) => if (tesex == 1) "male" else "female")
+    val sexProjection: Column = sexUdf($"tesex").name("sex")
+    val ageUdf = udf((teage:Double) =>
+      if ((teage >= 15) && (teage <= 22))
+        "young"
+      else if ((teage >= 23) && (teage <= 55))
+        "active"
+      else
+        "elder")
+    val ageProjection: Column = ageUdf($"teage").name("age")
 
-    val primaryNeedsProjection: Column = ???
-    val workProjection: Column = ???
-    val otherProjection: Column = ???
+    val primaryNeedsProjection: Column = (primaryNeedsColumns.reduce(_ + _) / 60).name("primaryNeeds")
+    val workProjection: Column = (workColumns.reduce(_ + _) / 60).name("work")
+    val otherProjection: Column = (otherColumns.reduce(_ + _) / 60).name("other")
     df
       .select(workingStatusProjection, sexProjection, ageProjection, primaryNeedsProjection, workProjection, otherProjection)
       .where($"telfs" <= 4) // Discard people who are not in labor force
@@ -178,7 +188,7 @@ object TimeUsage {
     * Finally, the resulting DataFrame should be sorted by working status, sex and age.
     */
   def timeUsageGrouped(summed: DataFrame): DataFrame = {
-    ???
+    summed.groupBy($"working", $"sex", $"age").avg("primaryNeeds", "work", "other").orderBy("working", "sex", "age")
   }
 
   /**
